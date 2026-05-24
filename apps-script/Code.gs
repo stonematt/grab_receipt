@@ -19,7 +19,7 @@ const KEYS = {
 
 const SHEET_NAME = 'Receipts';
 
-// Receipts/2026/… keeps the root folder from ballooning past a few thousand files.
+// grab_receipt_images/2026/… keeps the root folder from ballooning past a few thousand files.
 const USE_YEAR_SUBFOLDERS = true;
 
 // Makes the Image URL clickable straight from the Sheet. Flip to false for a
@@ -53,7 +53,7 @@ function setup() {
   if (sheetId) {
     ss = SpreadsheetApp.openById(sheetId);
   } else {
-    ss = SpreadsheetApp.create('Receipts Clearing House');
+    ss = SpreadsheetApp.create('grab_receipt');
     sheetId = ss.getId();
     PROP.setProperty(KEYS.SHEET_ID, sheetId);
   }
@@ -69,7 +69,7 @@ function setup() {
   // --- Drive folder ---
   let folderId = PROP.getProperty(KEYS.FOLDER_ID);
   if (!folderId) {
-    folderId = DriveApp.createFolder('Receipts').getId();
+    folderId = DriveApp.createFolder('grab_receipt_images').getId();
     PROP.setProperty(KEYS.FOLDER_ID, folderId);
   }
 
