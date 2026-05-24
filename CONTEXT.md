@@ -21,7 +21,7 @@ iPhone Camera ─▶ Shortcut "Grab Receipt"
             POST JSON (+ base64 photo)
                    ▼
         Apps Script Web App  /exec   (executes as the owner)
-                   ├─▶ Drive  Receipts/<year>/<stamp>_<entity>_<vendor>.jpg
+                   ├─▶ Drive  grab_receipt_images/<year>/<stamp>_<entity>_<vendor>.jpg
                    └─▶ Sheet  Receipts tab  (append row)
 ```
 

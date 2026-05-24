@@ -15,7 +15,7 @@ you'll hit at receipt volume. See `docs/adr/0002-apps-script-append-endpoint.md`
 ## Setup (≈10 minutes)
 
 1. **Create the project.** Go to <https://script.google.com> ▸ **New project**.
-   Name it `Receipts Clearing House`.
+   Name it `grab_receipt`.
 
 2. **Add the code.**
    - Paste `Code.gs` over the default `Code.gs`.
@@ -27,7 +27,7 @@ you'll hit at receipt volume. See `docs/adr/0002-apps-script-append-endpoint.md`
    OAuth consent screen (Drive + Sheets). When it finishes, open
    **Execution log** and copy three values:
    - `SHEET_ID` / Sheet URL — your receipts spreadsheet (created automatically).
-   - `FOLDER_ID` / Drive URL — the `Receipts/` folder (created automatically).
+   - `FOLDER_ID` / Drive URL — the `grab_receipt_images/` folder (created automatically).
    - `SHARED_TOKEN` — paste this into the Shortcut's **Token** text field.
 
    > `setup()` is idempotent. Run it again any time to re-read the IDs/token; it
@@ -45,6 +45,20 @@ you'll hit at receipt volume. See `docs/adr/0002-apps-script-append-endpoint.md`
    ```json
    {"ok":true,"service":"receipts-clearing-house","configured":true}
    ```
+
+   To test the **POST** path from a terminal, send the body but **don't** force the
+   method with `-X POST`:
+   ```sh
+   curl -sL --data '{"token":"<SHARED_TOKEN>","vendor":"TEST","total":1.23,"entity":"Other"}' \
+     -H "Content-Type: application/json" "<EXEC_URL>"
+   ```
+   Apps Script answers every web-app call with a 302 to a
+   `script.googleusercontent.com/macros/echo` URL that serves the body, and that URL
+   accepts **GET only**. `curl -X POST -L` re-POSTs to it → `405` → an "unable to open
+   the file at this time" HTML page (looks like a permissions failure but isn't).
+   Plain `--data` lets curl follow the redirect as GET and return the JSON. The iOS
+   Shortcut's **Get Contents of URL** follows the redirect as GET automatically, so the
+   Shortcut is unaffected.
 
 ## Re-deploying after edits
 

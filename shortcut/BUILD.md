@@ -183,7 +183,7 @@ skipped on the happy path.
 
 - Run it, photograph any printed receipt (or a receipt image on another screen).
 - Confirm the **Show Notification** fires, then check the Sheet for a new row and
-  the Drive `Receipts/<year>/` folder for the JPEG.
+  the Drive `grab_receipt_images/<year>/` folder for the JPEG.
 - To test the endpoint alone, open the `/exec` URL in Safari — it should return
   `{"ok":true,...,"configured":true}`.
 
@@ -198,3 +198,8 @@ skipped on the happy path.
   `SHARED_TOKEN`. Re-copy it from the `setup()` log.
 - **Nothing appends but no error** — confirm the deployment access is **Anyone**
   and you re-deployed a **New version** after any code edit.
+- **Curl test shows "unable to open the file at this time"** — not a permissions
+  problem. Apps Script returns the response via a 302 to a GET-only
+  `script.googleusercontent.com/macros/echo` URL; `curl -X POST -L` re-POSTs to it
+  and gets a `405`. Drop `-X POST` (use plain `--data`) so curl follows the redirect
+  as GET. The Shortcut's **Get Contents of URL** already does this, so it's unaffected.
