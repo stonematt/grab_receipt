@@ -16,11 +16,13 @@ is iOS 16+). Build it once on your iPhone; it takes ~20 minutes.
   - **Token** — the `SHARED_TOKEN` from `setup()`.
 - Settings ▸ Shortcuts ▸ enable **Allow Running Scripts** (on by default).
 
-## The 95% path you're building toward
+## The path you're building toward
 
-snap → glance at Vendor → glance at Amount → tap Entity → Submit. Four taps,
-under 30s. Date / Category / confidence live behind one **Advanced…** tap and are
-skipped on the happy path.
+snap → **Submit**. Two taps. Total + date are pulled automatically; the image saves
+and the row posts. Entity + Note live behind one **Add details…** tap and are
+skipped on the happy path. Vendor + category are filled later by the home-host
+vision LLM (Pass 2 — see `docs/adr/0004-two-pass-extraction-capture-and-llm.md`),
+not on the phone.
 
 ---
 
@@ -40,134 +42,93 @@ skipped on the happy path.
 4. **Extract Text from Image** — Image: `Photo`.
    → **Set Variable** `OCRText`.
 
-## Section C — Parse vendor
+## Section C — Parse total (largest currency amount, automatic)
 
-5. **Split Text** — Text: `OCRText`, Separator: **New Lines**.
-6. **Get Item from List** — **First Item** from the split result.
-   → **Set Variable** `Vendor`.
-
-## Section D — Parse total (largest currency amount)
-
-7. **Replace Text** — Find `,` Replace with *(empty)* in `OCRText`. Regex **off**.
+5. **Replace Text** — Find `,` Replace with *(empty)* in `OCRText`. Regex **off**.
    → **Set Variable** `CleanText`. *(handles `1,234.56` → `1234.56`)*
-8. **Match Text** — Text: `CleanText`, Regex: `\d+\.\d{2}`
+6. **Match Text** — Text: `CleanText`, Regex: `\d+\.\d{2}`
    → magic variable, call it **Matches**.
-9. **If** `Matches` **has any value**:
+7. **If** `Matches` **has any value**:
    - **Get Numbers from Input** — Input: `Matches`.
    - **Calculate Statistics** — Operation: **Maximum**, Input: the numbers.
      → **Set Variable** `Total`.
    **Otherwise**:
    - **Set Variable** `Total` to *(empty text)*.
    - **End If**
-10. **Match Text** — Text: `OCRText`, Regex:
-    `(?i)\b(grand\s+)?total\b|\bamount\s+due\b|\bbalance\s+due\b`
-    → magic variable **TotalKeyword**.
-11. Compute `ConfTotal` (nested If):
-    - **If** `Total` **has any value**:
-      - **If** `TotalKeyword` **has any value**: **Set Variable** `ConfTotal` = `90`
-        **Otherwise**: **Set Variable** `ConfTotal` = `60` · **End If**
-      **Otherwise**: **Set Variable** `ConfTotal` = `30`
-    - **End If**
 
-## Section E — Parse date (first date token, else today)
+> No confidence score, no keyword check — `Total` is **provisional**. Pass 2's
+> vision LLM corrects it (notably the cash-receipt tendered-vs-total blind spot).
 
-12. **Match Text** — Text: `OCRText`, Regex:
-    `(?i)\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2}|[A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4})\b`
-    → magic variable **DateMatches**.
-13. **If** `DateMatches` **has any value**:
-    - **Get Item from List** — **First Item** from `DateMatches` → **Set Variable** `Date`.
-    - **Set Variable** `ConfDate` = `90`
-    **Otherwise**:
-    - **Format Date** — Date: **Current Date**, Format: **Custom** `yyyy-MM-dd`
-      → **Set Variable** `Date`.
-    - **Set Variable** `ConfDate` = `40`
-    - **End If**
-14. **Set Variable** `ConfVendor` = `70`.   *(vendor is always heuristic — see ocr-parsing.md)*
-15. **Set Variable** `Category` = `Uncategorized`.   *(Advanced default, pre-set)*
+## Section D — Parse date (first date token, else today, automatic)
 
-## Section F — Review (minimal main path)
+8. **Match Text** — Text: `OCRText`, Regex:
+   `(?i)\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2}|[A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4})\b`
+   → magic variable **DateMatches**.
+9. **If** `DateMatches` **has any value**:
+   - **Get Item from List** — **First Item** from `DateMatches` → **Set Variable** `Date`.
+   **Otherwise**:
+   - **Format Date** — Date: **Current Date**, Format: **Custom** `yyyy-MM-dd`
+     → **Set Variable** `Date`.
+   - **End If**
 
-16. **Ask for Input** — Input Type: **Text** — Prompt: `Vendor` — Default Answer: `Vendor`.
-    → **Set Variable** `Vendor`.
-17. **Ask for Input** — Input Type: **Number** — Prompt: `Amount ($)` — Default Answer: `Total`.
-    → **Set Variable** `Total`.
-18. **Choose from List** — Prompt: `Entity` — List items (add one per line):
-    ```
-    Household
-    Lithos
-    Purple Pastures
-    StoneGynOnc
-    Northwest Hub
-    Other
-    SPLIT
-    ```
-    → **Set Variable** `Entity`. *(If you cancel here the Shortcut stops — Entity is required.)*
-19. **If** `Entity` **is** `SPLIT`: **Set Variable** `Category` = `Mixed` · **End If**.
-20. **Ask for Input** — Input Type: **Text** — Prompt: `Note (optional)` — Default Answer: *(empty)*.
-    → **Set Variable** `Note`. *(Tap Done to skip.)*
+## Section E — Optional details (Submit | Add details…)
 
-## Section G — Advanced accordion (one tap, collapsed by default)
+Set defaults first so a straight **Submit** posts a complete row:
 
-21. **Choose from Menu** — Prompt: `Submit?` — two menu items, in this order:
-    - **Submit** — *(leave this case empty; happy path falls straight through)*
-    - **Advanced…** — put these inside this case:
-      1. **Ask for Input** — **Text** — Prompt `Date` — Default Answer `Date`
-         → **Set Variable** `Date`.
-      2. **Choose from List** — Prompt `Category` — items:
+10. **Set Variable** `Entity` = `Unassigned`.
+11. **Set Variable** `Note` = *(empty text)*.
+12. **Choose from Menu** — Prompt: `Submit?` — two menu items, in this order:
+    - **Submit** — *(leave this case empty; snap-and-go falls straight through)*
+    - **Add details…** — put these inside this case:
+      1. **Choose from List** — Prompt `Entity` — items (one per line):
          ```
-         Uncategorized
-         Groceries
-         Fuel
-         Supplies
-         Equipment
-         Meals & Entertainment
-         Travel
-         Utilities
-         Professional Services
-         Medical
-         Mixed
+         Household
+         Lithos
+         Purple Pastures
+         StoneGynOnc
+         Northwest Hub
+         Other
+         SPLIT
+         Unassigned
          ```
-         → **Set Variable** `Category`.
-      3. **Text** → `Vendor {ConfVendor}%  ·  Total {ConfTotal}%  ·  Date {ConfDate}%`
-         (insert the three Conf variables inline).
-      4. **Show Result** — the text above. *(read-only audit glance; tap to continue)*
+         → **Set Variable** `Entity`.
+      2. **Ask for Input** — **Text** — Prompt `Note (optional)` — Default Answer *(empty)*
+         → **Set Variable** `Note`. *(Tap Done to skip.)*
     - **End Menu**
 
-## Section H — Encode + send
+> Vendor + category are **not** asked here — Pass 2 fills them. `SPLIT` still flags
+> `Needs Split = TRUE` server-side (the Apps Script sets it from the entity value).
 
-22. **Base64 Encode** — Input: `Photo`.
+## Section F — Encode + send
+
+13. **Base64 Encode** — Input: `Photo`.
     → **Set Variable** `ImageB64`.
-23. **Get Contents of URL** — URL: `Endpoint`
+14. **Get Contents of URL** — URL: `Endpoint`
     - **Method: POST**
     - **Request Body: JSON** — add these fields (key → value):
 
       | Key          | Value (variable / literal) |
       |--------------|----------------------------|
       | `token`      | `Token`                    |
-      | `vendor`     | `Vendor`                   |
       | `total`      | `Total`                    |
       | `entity`     | `Entity`                   |
       | `note`       | `Note`                     |
       | `date`       | `Date`                     |
-      | `category`   | `Category`                 |
-      | `confVendor` | `ConfVendor`               |
-      | `confTotal`  | `ConfTotal`                |
-      | `confDate`   | `ConfDate`                 |
       | `imageMime`  | `image/jpeg` (literal text)|
       | `imageBase64`| `ImageB64`                 |
 
     → magic variable **Response**.
 
-## Section I — Confirm
+## Section G — Confirm
 
-24. **Get Dictionary from Input** — Input: `Response`.
-25. **Get Dictionary Value** — Get **Value** for **Key** `error`
+15. **Get Dictionary from Input** — Input: `Response`.
+16. **Get Dictionary Value** — Get **Value** for **Key** `error`
     → magic variable **ErrVal**.
-26. **If** `ErrVal` **has any value**:
+17. **If** `ErrVal` **has any value**:
     - **Show Alert** — Title `⚠️ Save failed` — Message: `ErrVal`. *(turn off "Show Cancel")*
     **Otherwise**:
-    - **Show Notification** — Body: `✅ Saved  {Vendor}  ${Total}  →  {Entity}`
-      (insert variables inline).
+    - **Show Notification** — Body: `✅ Saved  ${Total}  →  {Entity}`
+      (insert variables inline). *(Vendor lands later, via Pass 2.)*
     - **End If**
 
 ---
@@ -189,11 +150,13 @@ skipped on the happy path.
 
 ## Common gotchas
 
-- **Total is wrong / blank** — the "largest number" heuristic missed (e.g. a phone
-  number with a decimal, or a faded total). Just type it in the Amount prompt; the
-  field is always editable. Confidence in the Sheet will show why.
-- **Vendor is an address line** — some receipts print the address above the name.
-  Edit it in the Vendor prompt. (Vendor confidence is intentionally 70/yellow.)
+- **Total is wrong / blank** — the "largest number" heuristic missed (faded total,
+  or a cash receipt where the *tendered* amount is larger). It's provisional by
+  design (no Amount prompt at capture — snap-and-go); Pass 2's vision LLM corrects
+  it, or fix it directly in the Sheet.
+- **Vendor is blank in the Sheet** — expected. Vendor + category are filled by
+  Pass 2 (home-host vision LLM), not on the phone. Rows show `Processed = FALSE`
+  until then.
 - **`unauthorized` alert** — the `Token` text doesn't match the script's
   `SHARED_TOKEN`. Re-copy it from the `setup()` log.
 - **Nothing appends but no error** — confirm the deployment access is **Anyone**
