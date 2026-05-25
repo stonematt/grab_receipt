@@ -1,7 +1,14 @@
 # ADR-0001 — On-device OCR via Shortcuts; heuristic (not Vision) confidence
 
-- Status: accepted
+- Status: accepted; **partially superseded by [ADR-0004](0004-two-pass-extraction-capture-and-llm.md)**
 - Date: 2026-05-23
+
+> **Superseded note (2026-05-25):** ADR-0004 splits extraction into two passes.
+> On-device parsing is kept for **total + date only**; vendor moves to a home-host
+> vision LLM. The **heuristic confidence scores below are dropped** (no at-capture
+> review to justify them) and replaced by `Source` / `Processed` columns. The
+> "on-device only / nothing leaves the device" stance is revisited in ADR-0004.
+> The rest of this ADR (Vision returns text-only; no native app in MVP) still holds.
 
 ## Context
 

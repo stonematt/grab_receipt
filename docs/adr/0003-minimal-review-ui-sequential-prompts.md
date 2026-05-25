@@ -1,7 +1,13 @@
 # ADR-0003 — Minimal review UI via sequential prompts + Advanced accordion
 
-- Status: accepted
+- Status: accepted; **partially superseded by [ADR-0004](0004-two-pass-extraction-capture-and-llm.md)**
 - Date: 2026-05-23
+
+> **Superseded note (2026-05-25):** ADR-0004 prioritizes snap-and-go. The
+> always-shown Vendor + Amount prompts and the confidence summary are removed;
+> Entity becomes optional (default `Unassigned`). The review UI collapses to a
+> single **Submit | Add details…** menu. The "sequential prompts, no native form"
+> reasoning here still holds for the remaining optional prompts.
 
 ## Context
 

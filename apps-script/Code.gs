@@ -1,9 +1,14 @@
 /**
  * Receipts Clearing House — Apps Script append endpoint.
  *
- * Deployed as a Web App. The iOS Shortcut POSTs a JSON payload here; this script:
+ * Deployed as a Web App. The iOS Shortcut POSTs a Pass-1 capture payload here; this
+ * script:
  *   1. saves the receipt photo to a Drive folder (year-bucketed), and
- *   2. appends a row to the Receipts sheet with all fields + OCR confidence.
+ *   2. appends a row to the Receipts sheet (Source=heuristic, Processed=FALSE).
+ *
+ * Vendor + category are filled later by the Pass-2 home-host vision LLM, which
+ * matches the row on Image URL and sets Source=llm, Processed=TRUE. See
+ * docs/adr/0004-two-pass-extraction-capture-and-llm.md.
  *
  * One-time setup: run setup() from the editor, copy the logged IDs/token,
  * then Deploy ▸ New deployment ▸ Web app. See apps-script/README.md.
@@ -33,12 +38,11 @@ const HEADERS = [
   'Total',
   'Entity',
   'Category',
-  'OCR Confidence: Date (%)',
-  'OCR Confidence: Vendor (%)',
-  'OCR Confidence: Total (%)',
   'Image URL',
   'Notes',
   'Needs Split',
+  'Source',
+  'Processed',
 ];
 
 /**
@@ -64,6 +68,16 @@ function setup() {
     sheet.appendRow(HEADERS);
     sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
     sheet.setFrozenRows(1);
+  } else {
+    // ADR-0004 changed the schema (dropped 3 OCR-confidence columns, added
+    // Source + Processed). setup() won't rewrite a non-empty sheet, so warn loudly
+    // if the existing header no longer matches — otherwise new rows misalign.
+    const existing = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (existing.join('') !== HEADERS.join('')) {
+      Logger.log('⚠️  Sheet header does NOT match the current schema. New rows will ' +
+        'misalign. Clear the Receipts tab (delete all rows incl. header) and re-run ' +
+        'setup(), or hand-edit the header row to: ' + HEADERS.join(' · '));
+    }
   }
 
   // --- Drive folder ---
@@ -118,17 +132,17 @@ function doPost(e) {
     const now = new Date();
     const tz = Session.getScriptTimeZone();
 
-    // --- fields + Advanced defaults (mirror the Shortcut) ---
-    const vendor = String(data.vendor || '').trim() || 'Unknown';
+    // --- Pass-1 capture fields (mirror the Shortcut) ---
+    // Vendor + Category are intentionally left blank here; Pass 2 fills them.
+    const vendor = String(data.vendor || '').trim();
     const total = data.total != null && data.total !== '' ? Number(data.total) : '';
-    const entity = String(data.entity || 'Other').trim();
-    const category = String(data.category || 'Uncategorized').trim() || 'Uncategorized';
+    const entity = String(data.entity || 'Unassigned').trim() || 'Unassigned';
+    const category = String(data.category || '').trim();
     const note = String(data.note || '');
     const dateStr = String(data.date || Utilities.formatDate(now, tz, 'yyyy-MM-dd'));
-    const cDate = numOrBlank_(data.confDate);
-    const cVendor = numOrBlank_(data.confVendor);
-    const cTotal = numOrBlank_(data.confTotal);
     const needsSplit = entity.toUpperCase() === 'SPLIT';
+    const source = 'heuristic';
+    const processed = false;
 
     // --- image -> Drive ---
     let imageUrl = '';
@@ -156,16 +170,16 @@ function doPost(e) {
     const sheet = SpreadsheetApp.openById(sheetId).getSheetByName(SHEET_NAME);
     sheet.appendRow([
       now, dateStr, vendor, total, entity, category,
-      cDate, cVendor, cTotal, imageUrl, note, needsSplit,
+      imageUrl, note, needsSplit, source, processed,
     ]);
 
     return json_({
       ok: true,
-      vendor: vendor,
       total: total,
       entity: entity,
       needsSplit: needsSplit,
       imageUrl: imageUrl,
+      processed: processed,
     });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
@@ -179,12 +193,6 @@ function targetFolder_(rootId, when, tz) {
   const year = Utilities.formatDate(when, tz, 'yyyy');
   const it = root.getFoldersByName(year);
   return it.hasNext() ? it.next() : root.createFolder(year);
-}
-
-function numOrBlank_(v) {
-  if (v === null || v === undefined || v === '') return '';
-  const n = Number(v);
-  return isNaN(n) ? '' : n;
 }
 
 function json_(obj) {
