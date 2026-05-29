@@ -35,11 +35,11 @@ Full domain model: [`CONTEXT.md`](./CONTEXT.md). Decisions: [`docs/adr/`](./docs
 
 ## Entity list (v1, hardcoded in the Shortcut)
 
-`Household` · `Lithos` · `Purple Pastures` · `StoneGynOnc` · `Northwest Hub` ·
+`Household` · `Lithos` · `Purple Pastures` · `SGO` · `NWHub` ·
 `Other` · `SPLIT`
 
 > **Placeholder mapping from the brief:** `Ranch` → **Purple Pastures**;
-> `[wife's business]` → **StoneGynOnc**. These are drawn from the entities named in
+> `[wife's business]` → **SGO** (StoneGynOnc). These are drawn from the entities named in
 > the brief's Problem statement. **Rename freely** — they're just lines in the
 > Shortcut's `Choose from List` action (Section F, step 18 of BUILD.md). The Apps
 > Script doesn't hardcode the list, so editing the Shortcut is all it takes.

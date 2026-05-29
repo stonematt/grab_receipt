@@ -85,8 +85,8 @@ Set defaults first so a straight **Submit** posts a complete row:
          Household
          Lithos
          Purple Pastures
-         StoneGynOnc
-         Northwest Hub
+         SGO
+         NWHub
          Other
          SPLIT
          Unassigned
@@ -101,7 +101,13 @@ Set defaults first so a straight **Submit** posts a complete row:
 
 ## Section F — Encode + send
 
-13. **Base64 Encode** — Input: `Photo`.
+12a. **Resize Image** — Image: `Photo`, Width: `1500`, Height: **Auto**.
+     → magic variable **Resized Image**. *(Modern phones shoot 48MP; the raw
+     base64 is tens of MB and the POST drops with `-1005 "network connection
+     was lost"`. 1500px wide is ample for the Drive archive + Pass 2 vision, and
+     cuts the body to hundreds of KB. OCR already ran on full-res `Photo` in
+     Section B, so parse quality is unaffected.)*
+13. **Base64 Encode** — Input: **Resized Image** *(not `Photo`)*.
     → **Set Variable** `ImageB64`.
 14. **Get Contents of URL** — URL: `Endpoint`
     - **Method: POST**

@@ -38,12 +38,12 @@ PASS 2 — post-processing (home host, async)
 ## Glossary
 
 - **Entity** — which household/business the spend belongs to. Fixed v1 list:
-  `Household`, `Lithos`, `Purple Pastures`, `StoneGynOnc`, `Northwest Hub`,
+  `Household`, `Lithos`, `Purple Pastures`, `SGO`, `NWHub`,
   `Other`, `SPLIT`, plus `Unassigned`. **Optional at capture, defaults
   `Unassigned`** (ADR-0004). The receipt can't reveal your cost-center bucket, so
   Pass 2 never fills it — set it now or reconcile later in the Sheet.
   - **Purple Pastures** = the ranch (brief's "Ranch" placeholder).
-  - **StoneGynOnc** = the spouse's practice (brief's "[wife's business]").
+  - **SGO** = StoneGynOnc, the spouse's practice (brief's "[wife's business]").
 - **SPLIT** — a single receipt spanning multiple entities (e.g. ranch fencing +
   household snacks on one Wilco run). Captured as one row; `Needs Split = TRUE`
   flags it for later manual reconciliation in the Sheet. No line-item parsing in MVP.
