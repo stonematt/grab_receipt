@@ -70,17 +70,17 @@ Services, Medical, Mixed.
 | Column | Source |
 |--------|--------|
 | Timestamp | server time at submit |
-| Date | OCR, reviewed (or today) |
-| Vendor | OCR, reviewed |
-| Total | OCR (largest amount), reviewed |
-| Entity | user-selected (can be `SPLIT`) |
-| Category | user-selected (can be `Mixed`); not required |
-| OCR Confidence: Date (%) | heuristic, read-only |
-| OCR Confidence: Vendor (%) | heuristic, read-only |
-| OCR Confidence: Total (%) | heuristic, read-only |
+| Date | OCR (first date token), or today |
+| Vendor | blank at capture; filled by Pass 2 |
+| Total | OCR (largest amount); Pass 2 may correct |
+| Entity | user-selected (can be `SPLIT`), defaults `Unassigned` |
+| Category | blank at capture; filled by Pass 2 (can be `Mixed`) |
 | Image URL | clickable Drive link |
 | Notes | optional manual |
 | Needs Split | auto-`TRUE` when Entity = `SPLIT` |
+| Source | `heuristic` (Pass 1) or `llm` (Pass 2) |
+| Processed | `FALSE` on capture; `TRUE` after Pass 2 |
+| Device | submitting device name (`Get Device Details`), or `Unknown` |
 
 ## Drive structure
 

@@ -109,7 +109,11 @@ fallback first so the row is always complete:
     Section B, so parse quality is unaffected.)*
 14. **Base64 Encode** — Input: **Resized Image** *(not `Photo`)*.
     → **Set Variable** `ImageB64`.
-15. **Get Contents of URL** — URL: `Endpoint`
+15. **Get Device Details** — Detail: **Device Name** → **Set Variable** `Device`.
+    *(Tags each row with the submitting device — useful when the same Shortcut is
+    shared across family devices. Set the name per device in Settings ▸ General ▸
+    About ▸ Name.)*
+16. **Get Contents of URL** — URL: `Endpoint`
     - **Method: POST**
     - **Request Body: JSON** — add these fields (key → value):
 
@@ -122,15 +126,16 @@ fallback first so the row is always complete:
       | `date`       | `Date`                     |
       | `imageMime`  | `image/jpeg` (literal text)|
       | `imageBase64`| `ImageB64`                 |
+      | `device`     | `Device`                   |
 
     → magic variable **Response**.
 
 ## Section G — Confirm
 
-16. **Get Dictionary from Input** — Input: `Response`.
-17. **Get Dictionary Value** — Get **Value** for **Key** `error`
+17. **Get Dictionary from Input** — Input: `Response`.
+18. **Get Dictionary Value** — Get **Value** for **Key** `error`
     → magic variable **ErrVal**.
-18. **If** `ErrVal` **has any value**:
+19. **If** `ErrVal` **has any value**:
     - **Show Alert** — Title `⚠️ Save failed` — Message: `ErrVal`. *(turn off "Show Cancel")*
     **Otherwise**:
     - **Show Notification** — Body: `✅ Saved  ${Total}  →  {Entity}`

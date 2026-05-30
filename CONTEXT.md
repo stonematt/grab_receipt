@@ -57,13 +57,17 @@ PASS 2 — post-processing (home host, async)
 - **Post-processing (Pass 2)** — home-host job that reads each image with a vision
   LLM and writes back vendor / category / corrected total. Model choice (local vs
   cloud API) deferred — see ADR-0004.
+- **Device** — name of the submitting device (Shortcut `Get Device Details` ▸
+  Device Name). Attributes rows when one Shortcut is shared across family devices.
+  Defaults `Unknown` if absent. Not a login — anyone with the Shortcut's token can
+  write, so treat it as a convenience label, not auth.
 - **Endpoint** — the Apps Script Web App `/exec` URL the Shortcut POSTs to.
 - **Token** — shared secret (`SHARED_TOKEN`) gating writes to the Endpoint.
 
 ## Sheet schema (`Receipts` tab, in order)
 
 `Timestamp · Date · Vendor · Total · Entity · Category ·
-Image URL · Notes · Needs Split · Source · Processed`
+Image URL · Notes · Needs Split · Source · Processed · Device`
 
 ## Hard boundaries (MVP)
 

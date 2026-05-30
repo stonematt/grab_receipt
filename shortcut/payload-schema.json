@@ -34,6 +34,10 @@
       "type": "string",
       "default": "image/jpeg",
       "description": "MIME type of the encoded image. 'image/jpeg' for Take Photo / Scan Document JPEG output."
+    },
+    "device": {
+      "type": "string",
+      "description": "Submitting device name (Shortcut 'Get Device Details' -> Device Name). Attributes rows when one Shortcut is shared across family devices. Absent/empty -> Apps Script stores 'Unknown'."
     }
   },
   "examples": [
@@ -44,7 +48,8 @@
       "note": "T-posts and field fence",
       "date": "2026-05-23",
       "imageBase64": "<base64 jpeg bytes>",
-      "imageMime": "image/jpeg"
+      "imageMime": "image/jpeg",
+      "device": "Matt's iPhone"
     },
     {
       "token": "b1f2c3d4-0000-0000-0000-abcdef123456",
