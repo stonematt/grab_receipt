@@ -1,26 +1,22 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Receipts Clearing House — Shortcut → Apps Script POST body",
-  "description": "JSON the iOS Shortcut sends to the Apps Script /exec endpoint via Get Contents of URL (POST, Request Body = JSON). The Apps Script doPost() reads e.postData.contents and parses this.",
+  "title": "Receipts Clearing House — Shortcut → Apps Script POST body (Pass 1 capture)",
+  "description": "JSON the iOS Shortcut sends to the Apps Script /exec endpoint via Get Contents of URL (POST, Request Body = JSON). The Apps Script doPost() reads e.postData.contents and parses this. Snap-and-go: only token + imageBase64 are required; vendor/category are filled later by the Pass 2 home-host vision LLM (see docs/adr/0004).",
   "type": "object",
-  "required": ["token", "entity", "imageBase64"],
+  "required": ["token", "imageBase64"],
   "properties": {
     "token": {
       "type": "string",
       "description": "Shared secret. Must equal the SHARED_TOKEN script property or the write is rejected (401-style {ok:false,error:'unauthorized'})."
     },
-    "vendor": {
-      "type": "string",
-      "description": "Reviewed vendor name. Empty/absent -> Apps Script stores 'Unknown'."
-    },
     "total": {
       "type": ["number", "string"],
-      "description": "Reviewed total amount, e.g. 47.32. Sent as a number; string also accepted and coerced."
+      "description": "Provisional total from the on-device heuristic (largest currency amount), e.g. 47.32. Blank/absent if nothing matched. Sent as a number; string also accepted and coerced. Pass 2 may overwrite with a corrected value."
     },
     "entity": {
       "type": "string",
-      "enum": ["Household", "Lithos", "Purple Pastures", "StoneGynOnc", "Northwest Hub", "Other", "SPLIT"],
-      "description": "Required, user-selected. 'SPLIT' makes Apps Script set Needs Split = TRUE."
+      "enum": ["Household", "Lithos", "Purple Pastures", "SGO", "NWHub", "Other", "SPLIT", "Unassigned"],
+      "description": "Optional, user-selected at capture. Absent/empty -> Apps Script stores 'Unassigned'. 'SPLIT' makes Apps Script set Needs Split = TRUE. Never filled by Pass 2 (the receipt can't reveal the cost-center bucket)."
     },
     "note": {
       "type": "string",
@@ -28,27 +24,11 @@
     },
     "date": {
       "type": "string",
-      "description": "Receipt date (as OCR'd or edited). Defaults to today (yyyy-MM-dd) if absent."
-    },
-    "category": {
-      "type": "string",
-      "description": "User-selected. Defaults to 'Uncategorized'. Use 'Mixed' for SPLIT receipts."
-    },
-    "confDate": {
-      "type": ["number", "string"],
-      "description": "Heuristic OCR confidence 0-100 for the date field. Stored read-only for audit."
-    },
-    "confVendor": {
-      "type": ["number", "string"],
-      "description": "Heuristic OCR confidence 0-100 for the vendor field."
-    },
-    "confTotal": {
-      "type": ["number", "string"],
-      "description": "Heuristic OCR confidence 0-100 for the total field."
+      "description": "Receipt date from the on-device heuristic (first date token). Defaults to today (yyyy-MM-dd) if absent."
     },
     "imageBase64": {
       "type": "string",
-      "description": "The captured receipt photo, Base64-encoded (Shortcuts 'Base64 Encode' action). Apps Script decodes -> Drive."
+      "description": "The captured receipt photo, Base64-encoded (Shortcuts 'Base64 Encode' action). Apps Script decodes -> Drive. Pass 2 reads this image back from Drive."
     },
     "imageMime": {
       "type": "string",
@@ -59,15 +39,17 @@
   "examples": [
     {
       "token": "b1f2c3d4-0000-0000-0000-abcdef123456",
-      "vendor": "Wilco Farm Store",
       "total": 478.12,
       "entity": "Purple Pastures",
       "note": "T-posts and field fence",
       "date": "2026-05-23",
-      "category": "Supplies",
-      "confDate": 90,
-      "confVendor": 70,
-      "confTotal": 90,
+      "imageBase64": "<base64 jpeg bytes>",
+      "imageMime": "image/jpeg"
+    },
+    {
+      "token": "b1f2c3d4-0000-0000-0000-abcdef123456",
+      "total": 12.40,
+      "date": "2026-05-25",
       "imageBase64": "<base64 jpeg bytes>",
       "imageMime": "image/jpeg"
     }

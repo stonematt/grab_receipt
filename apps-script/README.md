@@ -15,7 +15,7 @@ you'll hit at receipt volume. See `docs/adr/0002-apps-script-append-endpoint.md`
 ## Setup (≈10 minutes)
 
 1. **Create the project.** Go to <https://script.google.com> ▸ **New project**.
-   Name it `Receipts Clearing House`.
+   Name it `grab_receipt`.
 
 2. **Add the code.**
    - Paste `Code.gs` over the default `Code.gs`.
@@ -27,7 +27,7 @@ you'll hit at receipt volume. See `docs/adr/0002-apps-script-append-endpoint.md`
    OAuth consent screen (Drive + Sheets). When it finishes, open
    **Execution log** and copy three values:
    - `SHEET_ID` / Sheet URL — your receipts spreadsheet (created automatically).
-   - `FOLDER_ID` / Drive URL — the `Receipts/` folder (created automatically).
+   - `FOLDER_ID` / Drive URL — the `grab_receipt_images/` folder (created automatically).
    - `SHARED_TOKEN` — paste this into the Shortcut's **Token** text field.
 
    > `setup()` is idempotent. Run it again any time to re-read the IDs/token; it
@@ -45,6 +45,20 @@ you'll hit at receipt volume. See `docs/adr/0002-apps-script-append-endpoint.md`
    ```json
    {"ok":true,"service":"receipts-clearing-house","configured":true}
    ```
+
+   To test the **POST** path from a terminal, send the body but **don't** force the
+   method with `-X POST`:
+   ```sh
+   curl -sL --data '{"token":"<SHARED_TOKEN>","total":1.23,"entity":"Other"}' \
+     -H "Content-Type: application/json" "<EXEC_URL>"
+   ```
+   Apps Script answers every web-app call with a 302 to a
+   `script.googleusercontent.com/macros/echo` URL that serves the body, and that URL
+   accepts **GET only**. `curl -X POST -L` re-POSTs to it → `405` → an "unable to open
+   the file at this time" HTML page (looks like a permissions failure but isn't).
+   Plain `--data` lets curl follow the redirect as GET and return the JSON. The iOS
+   Shortcut's **Get Contents of URL** follows the redirect as GET automatically, so the
+   Shortcut is unaffected.
 
 ## Re-deploying after edits
 
@@ -66,4 +80,20 @@ The `/exec` URL stays the same.
 ## Payload contract
 
 The exact JSON the Shortcut sends is documented in
-[`../shortcut/payload-schema.json`](../shortcut/payload-schema.json).
+[`../shortcut/payload-schema.json`](../shortcut/payload-schema.json). Only `token` +
+`imageBase64` are required; `vendor` and `category` are **not** sent at capture —
+they're filled later by the Pass-2 home-host vision LLM (see
+[`../docs/adr/0004-two-pass-extraction-capture-and-llm.md`](../docs/adr/0004-two-pass-extraction-capture-and-llm.md)).
+
+## Schema change (ADR-0004) — re-seed an existing sheet
+
+ADR-0004 changed the Sheet schema: dropped the three `OCR Confidence: …` columns,
+added `Source` + `Processed`. Current `Receipts` header (in order):
+
+`Timestamp · Date · Vendor · Total · Entity · Category · Image URL · Notes · Needs Split · Source · Processed`
+
+`setup()` only writes the header on an **empty** tab — it won't migrate a sheet that
+already has rows, and `setup()` now logs a ⚠️ warning if the existing header no
+longer matches. To migrate: **delete every row in the `Receipts` tab (header
+included), then re-run `setup()`** so it re-seeds the new header. Test rows only at
+MVP, so just clear them. After editing `Code.gs`, re-deploy a **New version**.

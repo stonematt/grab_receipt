@@ -16,11 +16,13 @@ is iOS 16+). Build it once on your iPhone; it takes ~20 minutes.
   - **Token** — the `SHARED_TOKEN` from `setup()`.
 - Settings ▸ Shortcuts ▸ enable **Allow Running Scripts** (on by default).
 
-## The 95% path you're building toward
+## The path you're building toward
 
-snap → glance at Vendor → glance at Amount → tap Entity → Submit. Four taps,
-under 30s. Date / Category / confidence live behind one **Advanced…** tap and are
-skipped on the happy path.
+snap → pick entity → note (optional) → posts. Total + date are pulled
+automatically; the image saves and the row posts. The "don't care" path is two
+taps after the snap — `Unassigned` then Done. Vendor + category are filled later
+by the home-host vision LLM (Pass 2 — see
+`docs/adr/0004-two-pass-extraction-capture-and-llm.md`), not on the phone.
 
 ---
 
@@ -40,134 +42,99 @@ skipped on the happy path.
 4. **Extract Text from Image** — Image: `Photo`.
    → **Set Variable** `OCRText`.
 
-## Section C — Parse vendor
+## Section C — Parse total (largest currency amount, automatic)
 
-5. **Split Text** — Text: `OCRText`, Separator: **New Lines**.
-6. **Get Item from List** — **First Item** from the split result.
-   → **Set Variable** `Vendor`.
-
-## Section D — Parse total (largest currency amount)
-
-7. **Replace Text** — Find `,` Replace with *(empty)* in `OCRText`. Regex **off**.
+5. **Replace Text** — Find `,` Replace with *(empty)* in `OCRText`. Regex **off**.
    → **Set Variable** `CleanText`. *(handles `1,234.56` → `1234.56`)*
-8. **Match Text** — Text: `CleanText`, Regex: `\d+\.\d{2}`
+6. **Match Text** — Text: `CleanText`, Regex: `\d+\.\d{2}`
    → magic variable, call it **Matches**.
-9. **If** `Matches` **has any value**:
+7. **If** `Matches` **has any value**:
    - **Get Numbers from Input** — Input: `Matches`.
    - **Calculate Statistics** — Operation: **Maximum**, Input: the numbers.
      → **Set Variable** `Total`.
    **Otherwise**:
    - **Set Variable** `Total` to *(empty text)*.
    - **End If**
-10. **Match Text** — Text: `OCRText`, Regex:
-    `(?i)\b(grand\s+)?total\b|\bamount\s+due\b|\bbalance\s+due\b`
-    → magic variable **TotalKeyword**.
-11. Compute `ConfTotal` (nested If):
-    - **If** `Total` **has any value**:
-      - **If** `TotalKeyword` **has any value**: **Set Variable** `ConfTotal` = `90`
-        **Otherwise**: **Set Variable** `ConfTotal` = `60` · **End If**
-      **Otherwise**: **Set Variable** `ConfTotal` = `30`
-    - **End If**
 
-## Section E — Parse date (first date token, else today)
+> No confidence score, no keyword check — `Total` is **provisional**. Pass 2's
+> vision LLM corrects it (notably the cash-receipt tendered-vs-total blind spot).
 
-12. **Match Text** — Text: `OCRText`, Regex:
-    `(?i)\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2}|[A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4})\b`
-    → magic variable **DateMatches**.
-13. **If** `DateMatches` **has any value**:
-    - **Get Item from List** — **First Item** from `DateMatches` → **Set Variable** `Date`.
-    - **Set Variable** `ConfDate` = `90`
-    **Otherwise**:
-    - **Format Date** — Date: **Current Date**, Format: **Custom** `yyyy-MM-dd`
-      → **Set Variable** `Date`.
-    - **Set Variable** `ConfDate` = `40`
-    - **End If**
-14. **Set Variable** `ConfVendor` = `70`.   *(vendor is always heuristic — see ocr-parsing.md)*
-15. **Set Variable** `Category` = `Uncategorized`.   *(Advanced default, pre-set)*
+## Section D — Parse date (first date token, else today, automatic)
 
-## Section F — Review (minimal main path)
+8. **Match Text** — Text: `OCRText`, Regex:
+   `(?i)\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2}|[A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4})\b`
+   → magic variable **DateMatches**.
+9. **If** `DateMatches` **has any value**:
+   - **Get Item from List** — **First Item** from `DateMatches` → **Set Variable** `Date`.
+   **Otherwise**:
+   - **Format Date** — Date: **Current Date**, Format: **Custom** `yyyy-MM-dd`
+     → **Set Variable** `Date`.
+   - **End If**
 
-16. **Ask for Input** — Input Type: **Text** — Prompt: `Vendor` — Default Answer: `Vendor`.
-    → **Set Variable** `Vendor`.
-17. **Ask for Input** — Input Type: **Number** — Prompt: `Amount ($)` — Default Answer: `Total`.
-    → **Set Variable** `Total`.
-18. **Choose from List** — Prompt: `Entity` — List items (add one per line):
+## Section E — Details (entity → note → submit)
+
+No gate menu — both prompts run every capture, entity then note. Shortcuts has no
+single-page multi-field form, so it's two sequential screens. Set the entity
+fallback first so the row is always complete:
+
+10. **Set Variable** `Entity` = `Unassigned`. *(fallback; overwritten by the pick.
+    Use a **Text** action holding `Unassigned` feeding Set Variable.)*
+11. **Choose from List** — Prompt `Entity` — items (one per line):
     ```
-    Household
-    Lithos
     Purple Pastures
-    StoneGynOnc
-    Northwest Hub
+    Lithos
+    SGO
+    NWHub
     Other
+    Unassigned
     SPLIT
     ```
-    → **Set Variable** `Entity`. *(If you cancel here the Shortcut stops — Entity is required.)*
-19. **If** `Entity` **is** `SPLIT`: **Set Variable** `Category` = `Mixed` · **End If**.
-20. **Ask for Input** — Input Type: **Text** — Prompt: `Note (optional)` — Default Answer: *(empty)*.
-    → **Set Variable** `Note`. *(Tap Done to skip.)*
+    → **Set Variable** `Entity`. *(Tap `Unassigned` to skip categorizing.)*
+12. **Ask for Input** — **Text** — Prompt `Note (optional)` — Default Answer *(empty)*
+    → **Set Variable** `Note`. *(Tap Done to skip; empty default returns "".)*
 
-## Section G — Advanced accordion (one tap, collapsed by default)
+> Two taps for the "don't care" path: tap `Unassigned`, tap Done. Vendor +
+> category are **not** asked here — Pass 2 fills them. `SPLIT` still flags
+> `Needs Split = TRUE` server-side (the Apps Script sets it from the entity value).
+> `Household` is a legal entity (still in the payload schema) but omitted from the
+> v1 picker by choice — add a line to the list if you want it back.
 
-21. **Choose from Menu** — Prompt: `Submit?` — two menu items, in this order:
-    - **Submit** — *(leave this case empty; happy path falls straight through)*
-    - **Advanced…** — put these inside this case:
-      1. **Ask for Input** — **Text** — Prompt `Date` — Default Answer `Date`
-         → **Set Variable** `Date`.
-      2. **Choose from List** — Prompt `Category` — items:
-         ```
-         Uncategorized
-         Groceries
-         Fuel
-         Supplies
-         Equipment
-         Meals & Entertainment
-         Travel
-         Utilities
-         Professional Services
-         Medical
-         Mixed
-         ```
-         → **Set Variable** `Category`.
-      3. **Text** → `Vendor {ConfVendor}%  ·  Total {ConfTotal}%  ·  Date {ConfDate}%`
-         (insert the three Conf variables inline).
-      4. **Show Result** — the text above. *(read-only audit glance; tap to continue)*
-    - **End Menu**
+## Section F — Encode + send
 
-## Section H — Encode + send
-
-22. **Base64 Encode** — Input: `Photo`.
+13. **Resize Image** — Image: `Photo`, Width: `1500`, Height: **Auto**.
+    → magic variable **Resized Image**. *(Modern phones shoot 48MP; the raw
+    base64 is tens of MB and the POST drops with `-1005 "network connection
+    was lost"`. 1500px wide is ample for the Drive archive + Pass 2 vision, and
+    cuts the body to hundreds of KB. OCR already ran on full-res `Photo` in
+    Section B, so parse quality is unaffected.)*
+14. **Base64 Encode** — Input: **Resized Image** *(not `Photo`)*.
     → **Set Variable** `ImageB64`.
-23. **Get Contents of URL** — URL: `Endpoint`
+15. **Get Contents of URL** — URL: `Endpoint`
     - **Method: POST**
     - **Request Body: JSON** — add these fields (key → value):
 
       | Key          | Value (variable / literal) |
       |--------------|----------------------------|
       | `token`      | `Token`                    |
-      | `vendor`     | `Vendor`                   |
       | `total`      | `Total`                    |
       | `entity`     | `Entity`                   |
       | `note`       | `Note`                     |
       | `date`       | `Date`                     |
-      | `category`   | `Category`                 |
-      | `confVendor` | `ConfVendor`               |
-      | `confTotal`  | `ConfTotal`                |
-      | `confDate`   | `ConfDate`                 |
       | `imageMime`  | `image/jpeg` (literal text)|
       | `imageBase64`| `ImageB64`                 |
 
     → magic variable **Response**.
 
-## Section I — Confirm
+## Section G — Confirm
 
-24. **Get Dictionary from Input** — Input: `Response`.
-25. **Get Dictionary Value** — Get **Value** for **Key** `error`
+16. **Get Dictionary from Input** — Input: `Response`.
+17. **Get Dictionary Value** — Get **Value** for **Key** `error`
     → magic variable **ErrVal**.
-26. **If** `ErrVal` **has any value**:
+18. **If** `ErrVal` **has any value**:
     - **Show Alert** — Title `⚠️ Save failed` — Message: `ErrVal`. *(turn off "Show Cancel")*
     **Otherwise**:
-    - **Show Notification** — Body: `✅ Saved  {Vendor}  ${Total}  →  {Entity}`
-      (insert variables inline).
+    - **Show Notification** — Body: `✅ Saved  ${Total}  →  {Entity}`
+      (insert variables inline). *(Vendor lands later, via Pass 2.)*
     - **End If**
 
 ---
@@ -183,18 +150,25 @@ skipped on the happy path.
 
 - Run it, photograph any printed receipt (or a receipt image on another screen).
 - Confirm the **Show Notification** fires, then check the Sheet for a new row and
-  the Drive `Receipts/<year>/` folder for the JPEG.
+  the Drive `grab_receipt_images/<year>/` folder for the JPEG.
 - To test the endpoint alone, open the `/exec` URL in Safari — it should return
   `{"ok":true,...,"configured":true}`.
 
 ## Common gotchas
 
-- **Total is wrong / blank** — the "largest number" heuristic missed (e.g. a phone
-  number with a decimal, or a faded total). Just type it in the Amount prompt; the
-  field is always editable. Confidence in the Sheet will show why.
-- **Vendor is an address line** — some receipts print the address above the name.
-  Edit it in the Vendor prompt. (Vendor confidence is intentionally 70/yellow.)
+- **Total is wrong / blank** — the "largest number" heuristic missed (faded total,
+  or a cash receipt where the *tendered* amount is larger). It's provisional by
+  design (no Amount prompt at capture — snap-and-go); Pass 2's vision LLM corrects
+  it, or fix it directly in the Sheet.
+- **Vendor is blank in the Sheet** — expected. Vendor + category are filled by
+  Pass 2 (home-host vision LLM), not on the phone. Rows show `Processed = FALSE`
+  until then.
 - **`unauthorized` alert** — the `Token` text doesn't match the script's
   `SHARED_TOKEN`. Re-copy it from the `setup()` log.
 - **Nothing appends but no error** — confirm the deployment access is **Anyone**
   and you re-deployed a **New version** after any code edit.
+- **Curl test shows "unable to open the file at this time"** — not a permissions
+  problem. Apps Script returns the response via a 302 to a GET-only
+  `script.googleusercontent.com/macros/echo` URL; `curl -X POST -L` re-POSTs to it
+  and gets a `405`. Drop `-X POST` (use plain `--data`) so curl follows the redirect
+  as GET. The Shortcut's **Get Contents of URL** already does this, so it's unaffected.
