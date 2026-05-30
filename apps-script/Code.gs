@@ -43,6 +43,7 @@ const HEADERS = [
   'Needs Split',
   'Source',
   'Processed',
+  'Device',
 ];
 
 /**
@@ -143,6 +144,9 @@ function doPost(e) {
     const needsSplit = entity.toUpperCase() === 'SPLIT';
     const source = 'heuristic';
     const processed = false;
+    // Which device submitted (Shortcut sends Get Device Details ▸ Device Name).
+    // Lets a shared Shortcut attribute rows across family devices.
+    const device = String(data.device || 'Unknown').trim() || 'Unknown';
 
     // --- image -> Drive ---
     let imageUrl = '';
@@ -170,7 +174,7 @@ function doPost(e) {
     const sheet = SpreadsheetApp.openById(sheetId).getSheetByName(SHEET_NAME);
     sheet.appendRow([
       now, dateStr, vendor, total, entity, category,
-      imageUrl, note, needsSplit, source, processed,
+      imageUrl, note, needsSplit, source, processed, device,
     ]);
 
     return json_({
@@ -180,6 +184,7 @@ function doPost(e) {
       needsSplit: needsSplit,
       imageUrl: imageUrl,
       processed: processed,
+      device: device,
     });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
