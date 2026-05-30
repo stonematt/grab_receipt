@@ -15,7 +15,7 @@
     },
     "entity": {
       "type": "string",
-      "enum": ["Household", "Lithos", "Purple Pastures", "StoneGynOnc", "Northwest Hub", "Other", "SPLIT", "Unassigned"],
+      "enum": ["Household", "Lithos", "Purple Pastures", "SGO", "NWHub", "Other", "SPLIT", "Unassigned"],
       "description": "Optional, user-selected at capture. Absent/empty -> Apps Script stores 'Unassigned'. 'SPLIT' makes Apps Script set Needs Split = TRUE. Never filled by Pass 2 (the receipt can't reveal the cost-center bucket)."
     },
     "note": {
