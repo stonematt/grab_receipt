@@ -18,11 +18,11 @@ is iOS 16+). Build it once on your iPhone; it takes ~20 minutes.
 
 ## The path you're building toward
 
-snap → **Submit**. Two taps. Total + date are pulled automatically; the image saves
-and the row posts. Entity + Note live behind one **Add details…** tap and are
-skipped on the happy path. Vendor + category are filled later by the home-host
-vision LLM (Pass 2 — see `docs/adr/0004-two-pass-extraction-capture-and-llm.md`),
-not on the phone.
+snap → pick entity → note (optional) → posts. Total + date are pulled
+automatically; the image saves and the row posts. The "don't care" path is two
+taps after the snap — `Unassigned` then Done. Vendor + category are filled later
+by the home-host vision LLM (Pass 2 — see
+`docs/adr/0004-two-pass-extraction-capture-and-llm.md`), not on the phone.
 
 ---
 
@@ -71,45 +71,45 @@ not on the phone.
      → **Set Variable** `Date`.
    - **End If**
 
-## Section E — Optional details (Submit | Add details…)
+## Section E — Details (entity → note → submit)
 
-Set defaults first so a straight **Submit** posts a complete row:
+No gate menu — both prompts run every capture, entity then note. Shortcuts has no
+single-page multi-field form, so it's two sequential screens. Set the entity
+fallback first so the row is always complete:
 
-10. **Set Variable** `Entity` = `Unassigned`.
-11. **Set Variable** `Note` = *(empty text)*.
-12. **Choose from Menu** — Prompt: `Submit?` — two menu items, in this order:
-    - **Submit** — *(leave this case empty; snap-and-go falls straight through)*
-    - **Add details…** — put these inside this case:
-      1. **Choose from List** — Prompt `Entity` — items (one per line):
-         ```
-         Household
-         Lithos
-         Purple Pastures
-         SGO
-         NWHub
-         Other
-         SPLIT
-         Unassigned
-         ```
-         → **Set Variable** `Entity`.
-      2. **Ask for Input** — **Text** — Prompt `Note (optional)` — Default Answer *(empty)*
-         → **Set Variable** `Note`. *(Tap Done to skip.)*
-    - **End Menu**
+10. **Set Variable** `Entity` = `Unassigned`. *(fallback; overwritten by the pick.
+    Use a **Text** action holding `Unassigned` feeding Set Variable.)*
+11. **Choose from List** — Prompt `Entity` — items (one per line):
+    ```
+    Purple Pastures
+    Lithos
+    SGO
+    NWHub
+    Other
+    Unassigned
+    SPLIT
+    ```
+    → **Set Variable** `Entity`. *(Tap `Unassigned` to skip categorizing.)*
+12. **Ask for Input** — **Text** — Prompt `Note (optional)` — Default Answer *(empty)*
+    → **Set Variable** `Note`. *(Tap Done to skip; empty default returns "".)*
 
-> Vendor + category are **not** asked here — Pass 2 fills them. `SPLIT` still flags
+> Two taps for the "don't care" path: tap `Unassigned`, tap Done. Vendor +
+> category are **not** asked here — Pass 2 fills them. `SPLIT` still flags
 > `Needs Split = TRUE` server-side (the Apps Script sets it from the entity value).
+> `Household` is a legal entity (still in the payload schema) but omitted from the
+> v1 picker by choice — add a line to the list if you want it back.
 
 ## Section F — Encode + send
 
-12a. **Resize Image** — Image: `Photo`, Width: `1500`, Height: **Auto**.
-     → magic variable **Resized Image**. *(Modern phones shoot 48MP; the raw
-     base64 is tens of MB and the POST drops with `-1005 "network connection
-     was lost"`. 1500px wide is ample for the Drive archive + Pass 2 vision, and
-     cuts the body to hundreds of KB. OCR already ran on full-res `Photo` in
-     Section B, so parse quality is unaffected.)*
-13. **Base64 Encode** — Input: **Resized Image** *(not `Photo`)*.
+13. **Resize Image** — Image: `Photo`, Width: `1500`, Height: **Auto**.
+    → magic variable **Resized Image**. *(Modern phones shoot 48MP; the raw
+    base64 is tens of MB and the POST drops with `-1005 "network connection
+    was lost"`. 1500px wide is ample for the Drive archive + Pass 2 vision, and
+    cuts the body to hundreds of KB. OCR already ran on full-res `Photo` in
+    Section B, so parse quality is unaffected.)*
+14. **Base64 Encode** — Input: **Resized Image** *(not `Photo`)*.
     → **Set Variable** `ImageB64`.
-14. **Get Contents of URL** — URL: `Endpoint`
+15. **Get Contents of URL** — URL: `Endpoint`
     - **Method: POST**
     - **Request Body: JSON** — add these fields (key → value):
 
@@ -127,10 +127,10 @@ Set defaults first so a straight **Submit** posts a complete row:
 
 ## Section G — Confirm
 
-15. **Get Dictionary from Input** — Input: `Response`.
-16. **Get Dictionary Value** — Get **Value** for **Key** `error`
+16. **Get Dictionary from Input** — Input: `Response`.
+17. **Get Dictionary Value** — Get **Value** for **Key** `error`
     → magic variable **ErrVal**.
-17. **If** `ErrVal` **has any value**:
+18. **If** `ErrVal` **has any value**:
     - **Show Alert** — Title `⚠️ Save failed` — Message: `ErrVal`. *(turn off "Show Cancel")*
     **Otherwise**:
     - **Show Notification** — Body: `✅ Saved  ${Total}  →  {Entity}`

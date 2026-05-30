@@ -35,14 +35,16 @@ Full domain model: [`CONTEXT.md`](./CONTEXT.md). Decisions: [`docs/adr/`](./docs
 
 ## Entity list (v1, hardcoded in the Shortcut)
 
-`Household` · `Lithos` · `Purple Pastures` · `SGO` · `NWHub` ·
-`Other` · `SPLIT`
+`Purple Pastures` · `Lithos` · `SGO` · `NWHub` · `Other` ·
+`Unassigned` · `SPLIT`
 
 > **Placeholder mapping from the brief:** `Ranch` → **Purple Pastures**;
 > `[wife's business]` → **SGO** (StoneGynOnc). These are drawn from the entities named in
 > the brief's Problem statement. **Rename freely** — they're just lines in the
-> Shortcut's `Choose from List` action (Section F, step 18 of BUILD.md). The Apps
+> Shortcut's `Choose from List` action (Section E, step 11 of BUILD.md). The Apps
 > Script doesn't hardcode the list, so editing the Shortcut is all it takes.
+> `Household` is still a legal value in the payload schema but is omitted from the
+> v1 picker by choice — add a line to bring it back.
 
 - **SPLIT** = one receipt covering multiple entities. Saves as a single row with
   **Needs Split = TRUE** and Category auto-set to **Mixed**; reconcile later by
