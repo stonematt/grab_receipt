@@ -1,4 +1,4 @@
-# CONTEXT — Receipts Clearing House
+# GLOSSARY — Receipts Clearing House
 
 Single-context domain doc. Read this + `docs/adr/` before changing behavior. Use
 this vocabulary in code, commits, issues, and UI strings.

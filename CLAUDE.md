@@ -12,4 +12,4 @@ Triage roles map onto the nitimini GitHub Project label scheme (`status: *` + `a
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context: `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
