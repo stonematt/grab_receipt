@@ -9,7 +9,7 @@ iPhone ▸ Shortcut "Grab Receipt"  ──POST──▶  Apps Script /exec  ─�
         (Apple Vision OCR, on-device)        (runs as you)
 ```
 
-Full domain model: [`CONTEXT.md`](./CONTEXT.md). Decisions: [`docs/adr/`](./docs/adr/).
+Full domain model: [`GLOSSARY.md`](./GLOSSARY.md). Decisions: [`docs/adr/`](./docs/adr/).
 
 ## Repo layout
 
@@ -21,7 +21,7 @@ Full domain model: [`CONTEXT.md`](./CONTEXT.md). Decisions: [`docs/adr/`](./docs
 | `shortcut/BUILD.md` | Step-by-step iOS Shortcut build |
 | `shortcut/ocr-parsing.md` | Parsing rules + heuristic confidence model |
 | `shortcut/payload-schema.json` | The POST contract between Shortcut and Apps Script |
-| `CONTEXT.md` | Domain glossary |
+| `GLOSSARY.md` | Domain glossary |
 | `docs/adr/` | Architecture decisions (3) |
 
 ## Setup order
